@@ -860,6 +860,7 @@
       let price = 108;
       let activeImageIndex = 0;
       let inquiryProduct = params.get("product") || params.get("entry") || mainSkuName;
+      let isOpeningWhatsApp = false;
 
       function getPreferredAgent() {
         const id = (params.get("agent") || params.get("sales") || "").toLowerCase();
@@ -932,6 +933,11 @@
       function trackWhatsAppEvents(productName, sourceType) {
         if (typeof fbq !== "function") return;
 
+        const eventIdRoot = [
+          "wa",
+          Date.now(),
+          Math.random().toString(36).slice(2, 10)
+        ].join("-");
         const eventData = {
           content_name: productName,
           content_category: sourceType,
@@ -940,14 +946,33 @@
         };
 
         ["Contact", "InitiateCheckout", "Subscribe", "Purchase"].forEach((eventName) => {
-          fbq("track", eventName, eventData);
+          fbq("track", eventName, eventData, {
+            eventID: `${eventIdRoot}-${eventName}`
+          });
         });
+      }
+
+      function lockWhatsAppButtons() {
+        document
+          .querySelectorAll("#addToBag, #buyNow, #waFloat, [data-inquiry-product]")
+          .forEach((button) => {
+            button.disabled = true;
+            button.style.pointerEvents = "none";
+          });
       }
 
       function redirectToWhatsApp(url) {
         window.setTimeout(() => {
           window.location.href = url;
-        }, 350);
+        }, 1100);
+      }
+
+      function openTrackedWhatsApp(message, productName, sourceType) {
+        if (isOpeningWhatsApp) return;
+        isOpeningWhatsApp = true;
+        lockWhatsAppButtons();
+        trackWhatsAppEvents(productName, sourceType);
+        redirectToWhatsApp(buildWhatsAppUrl(assigned.person, message));
       }
 
       function openSkuWhatsApp() {
@@ -958,8 +983,7 @@
           `I would like more details, colors, stock, and the best price.`
         ].join("\n");
 
-        trackWhatsAppEvents(mainSkuName, "main_sku");
-        redirectToWhatsApp(buildWhatsAppUrl(assigned.person, message));
+        openTrackedWhatsApp(message, mainSkuName, "main_sku");
       }
 
       function openProductWhatsApp(productName) {
@@ -969,8 +993,7 @@
           `I would like more details, colors, stock, and the best price.`
         ].join("\n");
 
-        trackWhatsAppEvents(inquiryProduct, "product_showcase");
-        redirectToWhatsApp(buildWhatsAppUrl(assigned.person, message));
+        openTrackedWhatsApp(message, inquiryProduct, "product_showcase");
       }
 
       document.getElementById("minus").addEventListener("click", () => updateQty(qty - 1));
