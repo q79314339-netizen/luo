@@ -846,9 +846,9 @@
 
       const salespeople = [
         { id: "a", name: "业务员 A", whatsapp: "https://wa.me/8615790616391" },
-        { id: "b", name: "业务员 B", whatsapp: "https://wa.me/8618206041540" },
+        { id: "b", name: "业务员 B", whatsapp: "https://wa.me/8613489920964" },
         { id: "c", name: "业务员 C", whatsapp: "https://wa.me/8615759928130" },
-        { id: "d", name: "业务员 D", whatsapp: "https://wa.me/8613489920964" },
+        { id: "d", name: "业务员 D", whatsapp: "https://wa.me/8618206041540" },
         { id: "e", name: "业务员 E", whatsapp: "https://wa.me/8618050517014" }
       ];
 
@@ -860,7 +860,6 @@
       let price = 108;
       let activeImageIndex = 0;
       let inquiryProduct = params.get("product") || params.get("entry") || mainSkuName;
-      let isOpeningWhatsApp = false;
 
       function getPreferredAgent() {
         const id = (params.get("agent") || params.get("sales") || "").toLowerCase();
@@ -933,11 +932,6 @@
       function trackWhatsAppEvents(productName, sourceType) {
         if (typeof fbq !== "function") return;
 
-        const eventIdRoot = [
-          "wa",
-          Date.now(),
-          Math.random().toString(36).slice(2, 10)
-        ].join("-");
         const eventData = {
           content_name: productName,
           content_category: sourceType,
@@ -946,33 +940,14 @@
         };
 
         ["Contact", "InitiateCheckout", "Subscribe", "Purchase"].forEach((eventName) => {
-          fbq("track", eventName, eventData, {
-            eventID: `${eventIdRoot}-${eventName}`
-          });
+          fbq("track", eventName, eventData);
         });
-      }
-
-      function lockWhatsAppButtons() {
-        document
-          .querySelectorAll("#addToBag, #buyNow, #waFloat, [data-inquiry-product]")
-          .forEach((button) => {
-            button.disabled = true;
-            button.style.pointerEvents = "none";
-          });
       }
 
       function redirectToWhatsApp(url) {
         window.setTimeout(() => {
           window.location.href = url;
-        }, 1100);
-      }
-
-      function openTrackedWhatsApp(message, productName, sourceType) {
-        if (isOpeningWhatsApp) return;
-        isOpeningWhatsApp = true;
-        lockWhatsAppButtons();
-        trackWhatsAppEvents(productName, sourceType);
-        redirectToWhatsApp(buildWhatsAppUrl(assigned.person, message));
+        }, 350);
       }
 
       function openSkuWhatsApp() {
@@ -983,7 +958,8 @@
           `I would like more details, colors, stock, and the best price.`
         ].join("\n");
 
-        openTrackedWhatsApp(message, mainSkuName, "main_sku");
+        trackWhatsAppEvents(mainSkuName, "main_sku");
+        redirectToWhatsApp(buildWhatsAppUrl(assigned.person, message));
       }
 
       function openProductWhatsApp(productName) {
@@ -993,7 +969,8 @@
           `I would like more details, colors, stock, and the best price.`
         ].join("\n");
 
-        openTrackedWhatsApp(message, inquiryProduct, "product_showcase");
+        trackWhatsAppEvents(inquiryProduct, "product_showcase");
+        redirectToWhatsApp(buildWhatsAppUrl(assigned.person, message));
       }
 
       document.getElementById("minus").addEventListener("click", () => updateQty(qty - 1));
